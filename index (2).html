@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F0F1A">
+<title>AirTime</title>
+<style>
+  :root { --bg:#0F0F1A; --card:#1C1C2E; --card2:#26263f; --accent:#FF4D6D; --text:#fff; --muted:#9a9ab0; --line:#2a2a44; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  #app { height:100vh; height:100dvh; display:flex; flex-direction:column; max-width:520px; margin:0 auto; }
+  .screen { display:none; flex:1; min-height:0; flex-direction:column; }
+  .screen.active { display:flex; }
+  .logo { font-size:24px; font-weight:800; letter-spacing:-.3px; }
+  .logo b { color:var(--accent); font-weight:800; }
+  .topbar { padding:14px 16px 8px; }
+  .scroll { flex:1; overflow-y:auto; padding:0 16px 16px; }
+  input { width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--text); font-size:16px; margin-bottom:12px; outline:none; }
+  input:focus { border-color:var(--accent); }
+  button { font-family:inherit; }
+  button.primary { width:100%; padding:14px; border:none; border-radius:12px; background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+  button.link { background:none; border:none; color:var(--accent); font-size:14px; margin-top:14px; cursor:pointer; width:100%; }
+  .auth-box { margin:auto 0; padding:24px; }
+  .auth-box .logo { font-size:40px; text-align:center; margin-bottom:6px; }
+  .tag { text-align:center; color:var(--muted); margin-bottom:28px; }
+  .error { color:#ff8095; font-size:14px; min-height:20px; margin-bottom:8px; text-align:center; }
+
+  /* Home */
+  .search { padding:0 16px; }
+  .chips { display:flex; gap:8px; padding:0 16px 12px; overflow-x:auto; }
+  .chip { flex:none; padding:8px 14px; border-radius:999px; background:var(--card); color:var(--muted); border:none; font-size:14px; font-weight:600; cursor:pointer; }
+  .chip.on { background:var(--accent); color:#fff; }
+  .banner { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:16px; margin-bottom:14px; cursor:pointer; background:linear-gradient(135deg,#FF4D6D,#7a3cff); }
+  .banner .bi { font-size:28px; }
+  .banner .bt { font-weight:700; font-size:16px; }
+  .banner .bs { font-size:13px; opacity:.9; margin-top:2px; }
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .card { background:var(--card); border-radius:14px; overflow:hidden; cursor:pointer; }
+  .card:active { transform:scale(.98); }
+  .pw { position:relative; }
+  .poster { width:100%; aspect-ratio:2/3; object-fit:cover; background:var(--card2); display:block; }
+  .score { position:absolute; top:8px; left:8px; background:rgba(15,15,26,.82); padding:3px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+  .meta { padding:8px 10px 10px; }
+  .meta .t { font-size:13px; font-weight:600; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px; }
+  .meta .cta { font-size:12px; color:var(--accent); margin-top:6px; font-weight:600; }
+  .grid .empty { grid-column:1 / -1; }
+  .empty { margin:auto; text-align:center; color:var(--muted); padding:28px 16px; line-height:1.5; white-space:pre-line; }
+
+  /* Chats list */
+  .chatrow { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .thumb { width:48px; height:64px; border-radius:8px; object-fit:cover; background:var(--card2); flex:none; }
+  .thumb.ph { display:flex; align-items:center; justify-content:center; font-size:22px; }
+  .chatrow .mid { flex:1; min-width:0; }
+  .chatrow .nm { font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chatrow .lm { font-size:13px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chatrow .rt { text-align:right; flex:none; }
+  .chatrow .tt { font-size:11px; color:var(--muted); }
+  .chatrow .ct { display:inline-block; margin-top:6px; background:var(--card); color:var(--muted); font-size:11px; padding:2px 8px; border-radius:999px; }
+
+  /* Room */
+  .rhead { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .rhead .back { background:none; border:none; color:var(--text); font-size:24px; cursor:pointer; padding:0 4px; }
+  .rhead .thumb { width:38px; height:52px; border-radius:6px; }
+  .rhead .rtx { flex:1; min-width:0; }
+  .rhead .n { font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rhead .sub { font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rhead .infobtn { background:var(--card); border:none; color:var(--text); width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; }
+  .info { display:none; padding:10px 16px; font-size:13px; color:var(--muted); line-height:1.45; max-height:28vh; overflow:auto; border-bottom:1px solid var(--line); }
+  .info.show { display:block; }
+  #messages { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; }
+  .day { align-self:center; font-size:11px; color:var(--muted); background:var(--card); padding:3px 10px; border-radius:999px; margin:12px 0 4px; }
+  .row { display:flex; gap:8px; align-items:flex-end; margin-top:10px; }
+  .row.cont { margin-top:2px; }
+  .row.mine { flex-direction:row-reverse; }
+  .av { width:30px; height:30px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; }
+  .av.sp { visibility:hidden; }
+  .bub { max-width:76%; padding:8px 12px; border-radius:16px; background:var(--card); overflow-wrap:anywhere; }
+  .row.mine .bub { background:var(--accent); }
+  .who { font-size:12px; font-weight:700; margin-bottom:2px; }
+  .txt { font-size:15px; line-height:1.35; white-space:pre-wrap; }
+  .tm { font-size:10px; opacity:.6; text-align:right; margin-top:3px; }
+  .composer { display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); }
+  .composer input { margin:0; flex:1; border-radius:22px; }
+  .composer button { width:48px; height:48px; flex:none; border:none; border-radius:50%; background:var(--accent); color:#fff; font-size:20px; cursor:pointer; }
+
+  /* Profile */
+  .profile-card { background:var(--card); border-radius:16px; padding:24px; text-align:center; margin-bottom:16px; }
+  .avatar { width:80px; height:80px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:700; margin:0 auto 12px; }
+  .muted { color:var(--muted); font-size:14px; }
+  .credit { text-align:center; color:var(--muted); font-size:12px; margin-top:24px; line-height:1.5; }
+
+  nav { display:flex; background:var(--card); padding:8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  nav button { flex:1; background:none; border:none; color:var(--muted); font-size:12px; padding:6px; cursor:pointer; }
+  nav button .ic { display:block; font-size:22px; }
+  nav button.on { color:var(--accent); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- AUTH -->
+  <div class="screen active" id="s-auth">
+    <div class="auth-box">
+      <div class="logo">Air<b>Time</b></div>
+      <div class="tag">Chat about every anime</div>
+      <input id="username" placeholder="Username" autocomplete="nickname" style="display:none">
+      <input id="email" type="email" placeholder="Email" autocomplete="email">
+      <input id="password" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+      <div class="error" id="auth-error"></div>
+      <button class="primary" id="auth-btn">Log in</button>
+      <button class="link" id="auth-toggle">New here? Create an account</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="s-home">
+    <div class="topbar"><span class="logo">Air<b>Time</b></span></div>
+    <div class="search"><input id="q" type="search" placeholder="Search any anime..." autocomplete="off"></div>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="airing">🔥 Airing now</button>
+      <button class="chip" data-f="top">🏆 Top rated</button>
+      <button class="chip" data-f="popular">⭐ Popular</button>
+    </div>
+    <div class="scroll" id="home-scroll">
+      <div class="banner" id="general">
+        <div class="bi">💬</div>
+        <div><div class="bt">General Chat</div><div class="bs">Talk about any anime with everyone</div></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <!-- CHATS -->
+  <div class="screen" id="s-chats">
+    <div class="topbar"><span class="logo">Active <b>Chats</b></span></div>
+    <div class="scroll" id="chat-list"></div>
+  </div>
+
+  <!-- ROOM -->
+  <div class="screen" id="s-room">
+    <div class="rhead">
+      <button class="back" id="back">&#8592;</button>
+      <div id="r-thumb"></div>
+      <div class="rtx"><div class="n" id="r-title"></div><div class="sub" id="r-sub"></div></div>
+      <button class="infobtn" id="info-btn">i</button>
+    </div>
+    <div class="info" id="r-info"></div>
+    <div id="messages"></div>
+    <div class="composer">
+      <input id="msg" placeholder="Say something..." autocomplete="off" maxlength="500" enterkeyhint="send">
+      <button id="send">&#10148;</button>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="s-profile">
+    <div class="topbar"><span class="logo">Your <b>Profile</b></span></div>
+    <div class="scroll">
+      <div class="profile-card">
+        <div class="avatar" id="avatar"></div>
+        <div style="font-size:20px;font-weight:700" id="p-name"></div>
+        <div class="muted" id="p-email"></div>
+      </div>
+      <input id="new-name" placeholder="Change username">
+      <button class="primary" id="save-name">Save username</button>
+      <button class="link" id="logout">Log out</button>
+      <div class="credit">Anime info and posters from MyAnimeList via the Jikan API.</div>
+    </div>
+  </div>
+
+  <nav id="nav" style="display:none">
+    <button id="nav-home" class="on"><span class="ic">&#127916;</span>Anime</button>
+    <button id="nav-chats"><span class="ic">&#128172;</span>Chats</button>
+    <button id="nav-profile"><span class="ic">&#128100;</span>Profile</button>
+  </nav>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, addDoc, query, orderBy, limit, limitToLast, onSnapshot, serverTimestamp, increment }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDDyJZV4EEyPWND7N-upPa-7u4J-RWL4nM",
+  authDomain: "airtime-77317.firebaseapp.com",
+  projectId: "airtime-77317",
+  storageBucket: "airtime-77317.firebasestorage.app",
+  messagingSenderId: "687301498021",
+  appId: "1:687301498021:web:45d2cd73ee637d79aaa94c"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(c)); });
+  return e;
+}
+
+const SCREENS = ["s-auth", "s-home", "s-chats", "s-room", "s-profile"];
+let active = "s-auth";
+function show(id) {
+  active = id;
+  SCREENS.forEach(s => $(s).classList.toggle("active", s === id));
+  const tabbed = ["s-home", "s-chats", "s-profile"].includes(id);
+  $("nav").style.display = tabbed ? "flex" : "none";
+  ["home", "chats", "profile"].forEach(n => $("nav-" + n).classList.toggle("on", id === "s-" + n));
+}
+
+function hueOf(s) {
+  let x = 0;
+  for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 360;
+  return x;
+}
+
+function poster(src, cls) {
+  const i = h("img", { class: cls, alt: "", loading: "lazy", referrerpolicy: "no-referrer" });
+  if (src) i.src = src;
+  i.onerror = () => { i.style.visibility = "hidden"; };
+  return i;
+}
+function thumb(room, cls) {
+  return room.image ? poster(room.image, cls) : h("div", { class: cls + " ph", text: "💬" });
+}
+
+function dayLabel(d) {
+  const t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return "Today";
+  if (d.toDateString() === y.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+function shortTime(d) {
+  return d.toDateString() === new Date().toDateString()
+    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+// ---------- auth ----------
+let isSignup = false;
+$("auth-toggle").onclick = () => {
+  isSignup = !isSignup;
+  $("username").style.display = isSignup ? "block" : "none";
+  $("auth-btn").textContent = isSignup ? "Create account" : "Log in";
+  $("auth-toggle").textContent = isSignup ? "Already have an account? Log in" : "New here? Create an account";
+  $("auth-error").textContent = "";
+};
+
+function friendlyError(code) {
+  const map = {
+    "auth/invalid-email": "That email looks wrong.",
+    "auth/missing-password": "Please enter a password.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/email-already-in-use": "This email already has an account. Log in instead.",
+    "auth/invalid-credential": "Wrong email or password.",
+    "auth/user-not-found": "No account found with this email.",
+    "auth/wrong-password": "Wrong email or password.",
+    "auth/network-request-failed": "No internet connection."
+  };
+  return map[code] || "Something went wrong. Try again.";
+}
+
+$("auth-btn").onclick = async () => {
+  const email = $("email").value.trim();
+  const pass = $("password").value;
+  const name = $("username").value.trim();
+  $("auth-error").textContent = "";
+  try {
+    if (isSignup) {
+      if (!name) { $("auth-error").textContent = "Please enter a username."; return; }
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      renderProfile(auth.currentUser);
+    } else {
+      await signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (e) {
+    $("auth-error").textContent = friendlyError(e.code);
+  }
+};
+
+// ---------- anime feed (Jikan API) ----------
+const JIKAN = "https://api.jikan.moe/v4";
+const FEEDS = {
+  airing: "/seasons/now?sfw=true&limit=24",
+  top: "/top/anime?sfw=true&limit=24",
+  popular: "/top/anime?filter=bypopularity&sfw=true&limit=24"
+};
+let feed = "airing";
+let feedLoaded = false;
+
+async function jikan(path) {
+  const url = JIKAN + path;
+  try { const c = sessionStorage.getItem("jk:" + url); if (c) return JSON.parse(c); } catch (e) {}
+  for (let i = 0; i < 3; i++) {
+    const r = await fetch(url);
+    if (r.status === 429) { await new Promise(s => setTimeout(s, 1200)); continue; }
+    if (!r.ok) throw new Error("http " + r.status);
+    const j = await r.json();
+    const list = j.data || [];
+    try { sessionStorage.setItem("jk:" + url, JSON.stringify(list)); } catch (e) {}
+    return list;
+  }
+  throw new Error("busy");
+}
+
+function toRoom(a) {
+  const bits = [a.type, a.episodes ? a.episodes + " eps" : null, a.score ? "★ " + a.score : null].filter(Boolean);
+  return {
+    id: "a" + a.mal_id,
+    title: a.title_english || a.title,
+    image: (a.images && a.images.jpg && a.images.jpg.image_url) || "",
+    sub: bits.join(" · "),
+    synopsis: a.synopsis || "No synopsis available.",
+    score: a.score
+  };
+}
+
+function card(room) {
+  return h("div", { class: "card", onclick: () => openRoom(room) },
+    h("div", { class: "pw" }, poster(room.image, "poster"), room.score ? h("span", { class: "score", text: "★ " + room.score }) : null),
+    h("div", { class: "meta" }, h("div", { class: "t", text: room.title }), h("div", { class: "cta", text: "💬 Join chat" })));
+}
+
+let loadToken = 0;
+async function loadFeed(path) {
+  const token = ++loadToken;
+  const box = $("grid");
+  box.replaceChildren(h("div", { class: "empty", text: "Loading anime…" }));
+  try {
+    const list = await jikan(path);
+    if (token !== loadToken) return;
+    const seen = new Set();
+    const rooms = [];
+    list.forEach(a => { if (!seen.has(a.mal_id)) { seen.add(a.mal_id); rooms.push(toRoom(a)); } });
+    box.replaceChildren();
+    if (!rooms.length) { box.append(h("div", { class: "empty", text: "No anime found." })); return; }
+    rooms.forEach(r => box.append(card(r)));
+    feedLoaded = true;
+  } catch (e) {
+    if (token !== loadToken) return;
+    box.replaceChildren(h("div", { class: "empty" }, "Could not load anime.", h("br"),
+      h("button", { class: "link", text: "Tap to try again", onclick: () => loadFeed(path) })));
+  }
+}
+
+function markChip(on = true) {
+  document.querySelectorAll(".chip").forEach(b => b.classList.toggle("on", on && b.dataset.f === feed));
+}
+document.querySelectorAll(".chip").forEach(b => {
+  b.onclick = () => {
+    feed = b.dataset.f;
+    $("q").value = "";
+    markChip();
+    $("home-scroll").scrollTop = 0;
+    loadFeed(FEEDS[feed]);
+  };
+});
+
+let searchTimer;
+$("q").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = $("q").value.trim();
+    if (q.length >= 2) {
+      markChip(false);
+      loadFeed("/anime?q=" + encodeURIComponent(q) + "&sfw=true&limit=24&order_by=members&sort=desc");
+    } else if (q.length === 0) {
+      markChip();
+      loadFeed(FEEDS[feed]);
+    }
+  }, 600);
+});
+
+const GENERAL = { id: "general", title: "General Chat", image: "", sub: "Talk about any anime with everyone",
+  synopsis: "Open chat for every anime fan. Be kind, and put spoilers behind a warning!" };
+$("general").onclick = () => openRoom(GENERAL);
+
+// ---------- room ----------
+let current = null, unsubRoom = null, backTo = "s-home", firstRender = true, lastSend = 0;
+
+function openRoom(r) {
+  current = r;
+  backTo = active === "s-chats" ? "s-chats" : "s-home";
+  $("r-thumb").replaceChildren(thumb(r, "thumb"));
+  $("r-title").textContent = r.title;
+  $("r-sub").textContent = r.sub || "";
+  $("r-info").textContent = r.synopsis || "";
+  $("r-info").classList.remove("show");
+  $("info-btn").style.display = r.synopsis ? "block" : "none";
+  $("messages").replaceChildren(h("div", { class: "empty", text: "Loading chat…" }));
+  firstRender = true;
+  show("s-room");
+  if (unsubRoom) unsubRoom();
+  const q = query(collection(db, "rooms", r.id, "messages"), orderBy("createdAt"), limitToLast(100));
+  unsubRoom = onSnapshot(q, renderMessages, () => {
+    $("messages").replaceChildren(h("div", { class: "empty", text: "Could not load messages.\nCheck your internet and database rules." }));
+  });
+}
+
+function renderMessages(snap) {
+  const box = $("messages");
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 140;
+  box.replaceChildren();
+  if (snap.empty) {
+    box.append(h("div", { class: "empty", text: "No messages yet.\nBe the first to say hi! 👋" }));
+    return;
+  }
+  const me = auth.currentUser && auth.currentUser.uid;
+  let prev = null, prevDay = "";
+  snap.forEach(d => {
+    const m = d.data({ serverTimestamps: "estimate" });
+    const t = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate() : new Date();
+    const day = t.toDateString();
+    if (day !== prevDay) { box.append(h("div", { class: "day", text: dayLabel(t) })); prevDay = day; prev = null; }
+    const mine = m.uid === me;
+    const cont = prev && prev.uid === m.uid && (t - prev.t) < 5 * 60 * 1000;
+    const hue = hueOf(m.uid || "");
+    const av = h("div", { class: "av" + (cont ? " sp" : ""), text: (m.name || "?").charAt(0).toUpperCase() });
+    av.style.background = "hsl(" + hue + " 55% 42%)";
+    let who = null;
+    if (!mine && !cont) {
+      who = h("div", { class: "who", text: m.name || "Anonymous" });
+      who.style.color = "hsl(" + hue + " 80% 72%)";
+    }
+    const bub = h("div", { class: "bub" }, who,
+      h("div", { class: "txt", text: m.text }),
+      h("div", { class: "tm", text: t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }));
+    box.append(h("div", { class: "row" + (mine ? " mine" : "") + (cont ? " cont" : "") }, mine ? null : av, bub));
+    prev = { uid: m.uid, t };
+  });
+  if (near || firstRender) box.scrollTop = box.scrollHeight;
+  firstRender = false;
+}
+
+async function send() {
+  const inp = $("msg");
+  const text = inp.value.trim();
+  const u = auth.currentUser;
+  if (!text || !current || !u) return;
+  if (Date.now() - lastSend < 600) return;
+  lastSend = Date.now();
+  inp.value = "";
+  inp.focus();
+  const name = u.displayName || "Anonymous";
+  try {
+    await addDoc(collection(db, "rooms", current.id, "messages"), {
+      text: text.slice(0, 500), uid: u.uid, name, createdAt: serverTimestamp()
+    });
+  } catch (e) {
+    inp.value = text;
+    alert("Message not sent. Check your internet.");
+    return;
+  }
+  try {
+    await setDoc(doc(db, "rooms", current.id), {
+      title: current.title, image: current.image || "", sub: current.sub || "",
+      synopsis: (current.synopsis || "").slice(0, 600),
+      lastText: text.slice(0, 80), lastName: name,
+      lastAt: serverTimestamp(), count: increment(1)
+    }, { merge: true });
+  } catch (e) {}
+}
+$("send").onclick = send;
+$("msg").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+$("back").onclick = () => { if (unsubRoom) unsubRoom(); show(backTo); };
+$("info-btn").onclick = () => $("r-info").classList.toggle("show");
+
+// ---------- active chats tab ----------
+let unsubChats = null;
+function watchChats() {
+  if (unsubChats) unsubChats();
+  const q = query(collection(db, "rooms"), orderBy("lastAt", "desc"), limit(40));
+  unsubChats = onSnapshot(q, snap => {
+    const box = $("chat-list");
+    box.replaceChildren();
+    if (snap.empty) {
+      box.append(h("div", { class: "empty", text: "No chats yet.\nOpen an anime and say hi! 💬" }));
+      return;
+    }
+    snap.forEach(d => {
+      const r = d.data({ serverTimestamps: "estimate" });
+      const room = { id: d.id, title: r.title || d.id, image: r.image || "", sub: r.sub || "", synopsis: r.synopsis || "" };
+      const when = r.lastAt && r.lastAt.toDate ? shortTime(r.lastAt.toDate()) : "";
+      box.append(h("div", { class: "chatrow", onclick: () => openRoom(room) },
+        thumb(room, "thumb"),
+        h("div", { class: "mid" },
+          h("div", { class: "nm", text: room.title }),
+          h("div", { class: "lm", text: (r.lastName ? r.lastName + ": " : "") + (r.lastText || "") })),
+        h("div", { class: "rt" },
+          h("div", { class: "tt", text: when }),
+          h("span", { class: "ct", text: (r.count || 0) + " msgs" }))));
+    });
+  }, () => {
+    $("chat-list").replaceChildren(h("div", { class: "empty", text: "Could not load chats." }));
+  });
+}
+
+// ---------- profile ----------
+function renderProfile(user) {
+  const name = user.displayName || "Anonymous";
+  $("p-name").textContent = name;
+  $("p-email").textContent = user.email || "";
+  $("avatar").textContent = name.charAt(0).toUpperCase();
+}
+$("save-name").onclick = async () => {
+  const n = $("new-name").value.trim();
+  if (!n || !auth.currentUser) return;
+  await updateProfile(auth.currentUser, { displayName: n });
+  renderProfile(auth.currentUser);
+  $("new-name").value = "";
+};
+$("logout").onclick = () => signOut(auth);
+
+// ---------- nav + auth state ----------
+$("nav-home").onclick = () => show("s-home");
+$("nav-chats").onclick = () => show("s-chats");
+$("nav-profile").onclick = () => { renderProfile(auth.currentUser); show("s-profile"); };
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    renderProfile(user);
+    show("s-home");
+    if (!feedLoaded) loadFeed(FEEDS[feed]);
+    watchChats();
+  } else {
+    if (unsubRoom) unsubRoom();
+    if (unsubChats) unsubChats();
+    feedLoaded = false;
+    show("s-auth");
+  }
+});
+</script>
+</body>
+</html>
